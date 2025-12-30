@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.spring.mapper.MovieMapper">
+
+    <select id="selectTitles" resultType="string">
+        SELECT title FROM movies ORDER BY id
+    </select>
+    
+    <select id="findAll" resultType="com.spring.dto.MovieDto">
+        SELECT
+            id,
+            title,
+            runtime_min AS runtimeMin,
+            rating,
+            description
+        FROM movies
+        ORDER BY id
+    </select>
+    
+    <select id="findById" resultType="com.spring.dto.MovieDto">
+    SELECT
+        id,
+        title,
+        runtime_min AS runtimeMin,
+        rating
+    FROM movies
+    WHERE id = #{id}
+</select>
+    
+
+</mapper>

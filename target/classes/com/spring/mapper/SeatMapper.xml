@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.spring.mapper.SeatMapper">
+
+    <!-- DB 컬럼 ↔ SeatStatusDto 필드 매핑
+         rowLabel, colNumber 는 일단 안 씀 -->
+    <resultMap id="SeatStatusMap" type="com.spring.dto.SeatStatusDto">
+        <id     property="seatId"     column="seat_id"/>
+        <result property="showtimeId" column="showtime_id"/>
+        <result property="screenId"   column="screen_id"/>
+        <result property="seatName"   column="seat_name"/>
+        <result property="reserved"   column="reserved"/>
+    </resultMap>
+
+    <!--
+      ★ 최소 버전: reservations / reservation_seats 테이블은 일단 안 씀
+      → 모든 좌석 reserved = 0 으로 내려보냄 (중복 체크는 나중에 추가)
+    -->
+    <select id="selectSeatStatusByShowtimeId"
+            parameterType="java.lang.Long"
+            resultMap="SeatStatusMap">
+
+        SELECT
+            s.id        AS seat_id,
+            st.id       AS showtime_id,
+            s.screen_id AS screen_id,
+            s.seat_name AS seat_name,
+            0           AS reserved     -- 전부 미예약으로 처리
+
+        FROM showtimes st
+        JOIN seats s
+          ON s.screen_id = st.screen_id
+
+        WHERE st.id = #{showtimeId}
+        ORDER BY s.id
+
+    </select>
+
+</mapper>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.spring.mapper.ReservationCancelMapper">
+
+  <select id="findShowtimeIdByReservationId" parameterType="long" resultType="long">
+    SELECT showtime_id
+    FROM reservations
+    WHERE id = #{reservationId}
+  </select>
+
+  <update id="updateReservationStatusToCanceled" parameterType="long">
+    UPDATE reservations
+    SET status = 'CANCELED'
+    WHERE id = #{reservationId}
+      AND status = 'PAID'
+  </update>
+
+  <delete id="deleteReservationSeats" parameterType="long">
+    DELETE FROM reservation_seats
+    WHERE reservation_id = #{reservationId}
+  </delete>
+
+</mapper>

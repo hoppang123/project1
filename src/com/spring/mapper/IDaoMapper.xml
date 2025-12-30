@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd"> 
+ 
+<mapper namespace="spring.mybatis.dao.IDao"> 
+ 
+ <select id="listDao" resultType="spring.mybatis.dto.ContentDto"> 
+  SELECT * FROM Mybatis_Bbs ORDER BY MID DESC 
+ </select> 
+  
+ <insert id="writeDao"> 
+  INSERT INTO Mybatis_Bbs (MID, MWRITER, MCONTENT) VALUES 
+(Mybatis_Bbs_SEQ.NEXTVAL, #{param1}, #{param2}) 
+ </insert> 
+  
+ <delete id="deleteDao"> 
+  DELETE FROM Mybatis_Bbs WHERE MID = #{param1} 
+ </delete> 
+  
+</mapper> 

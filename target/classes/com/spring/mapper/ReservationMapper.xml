@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.spring.mapper.ReservationMapper">
+
+    <!-- =========================================
+         1) 좌석 중복 체크
+       ========================================= -->
+    <select id="countReservedSeats"
+            parameterType="map"
+            resultType="int">
+        SELECT COUNT(*)
+        FROM reservation_seats rs
+        JOIN reservations r
+          ON rs.reservation_id = r.id
+        WHERE r.showtime_id = #{showtimeId}
+          AND r.status = 'CONFIRMED'
+          AND rs.seat_id IN
+          <foreach item="id" collection="seatIds"
+                   open="(" separator="," close=")">
+              #{id}
+          </foreach>
+    </select>
+
+    <!-- =========================================
+         2) 상영 기본 가격 조회
+       ========================================= -->
+    <select id="findBasePrice"
+            parameterType="long"
+            resultType="int">
+        SELECT base_price
+        FROM showtimes
+        WHERE id = #{showtimeId}
+    </select>
+
+    <!-- =========================================
+         3) reservations INSERT (예약 헤더)
+       ========================================= -->
+    <insert id="insertReservation"
+            parameterType="map">
+        INSERT INTO reservations
+            (user_id, showtime_id, total_price, status, created_at)
+        VALUES
+            (#{userId}, #{showtimeId}, #{totalPrice}, 'CONFIRMED', NOW())
+    </insert>
+
+    <!-- 3-1) LAST_INSERT_ID -->
+    <select id="findLastReservationId"
+            resultType="long">
+        SELECT LAST_INSERT_ID()
+    </select>
+
+    <!-- =========================================
+         4) reservation_seats INSERT (예약-좌석 연결)
+         ※ ReservationMapper 인터페이스도
+           insertReservationSeat(
+               @Param("reservationId") Long reservationId,
+               @Param("seatId")        Long seatId,
+               @Param("showtimeId")    Long showtimeId,
+               @Param("price")         Integer price
+           );
+           이렇게 맞춰놔야 함.
+       ========================================= -->
+    <insert id="insertReservationSeat"
+            parameterType="map">
+        INSERT INTO reservation_seats
+            (reservation_id, seat_id, showtime_id, price)
+        VALUES
+            (#{reservationId}, #{seatId}, #{showtimeId}, #{price})
+    </insert>
+
+    <!-- =========================================
+         5) 예매 취소
+       ========================================= -->
+    <update id="cancelReservation"
+            parameterType="long">
+        UPDATE reservations
+        SET status = 'CANCELED',
+            canceled_at = NOW()
+        WHERE id = #{reservationId}
+          AND status = 'CONFIRMED'
+    </update>
+
+    <!-- =========================================
+         6) (옵션) 예매 히스토리 상세 조회
+            ReservationMapper.findReservationsByUserId(userId)
+       ========================================= -->
+    <resultMap id="ReservationHistoryDtoMap"
+               type="com.spring.dto.ReservationHistoryDto">
+        <id     property="reservationId" column="reservation_id"/>
+        <result property="movieTitle"    column="movie_title"/>
+        <result property="startTime"     column="start_time"/>
+        <result property="endTime"       column="end_time"/>
+        <result property="theaterName"   column="theater_name"/>
+        <result property="screenName"    column="screen_name"/>
+        <result property="seatCode"      column="seat_name"/>
+        <result property="totalPrice"    column="total_price"/>
+        <result property="status"        column="status"/>
+    </resultMap>
+
+    <select id="findReservationsByUserId"
+            parameterType="long"
+            resultMap="ReservationHistoryDtoMap">
+        SELECT
+            r.id             AS reservation_id,
+            m.title          AS movie_title,
+            st.start_time    AS start_time,
+            st.end_time      AS end_time,
+            t.name           AS theater_name,
+            sc.name          AS screen_name,
+            s.seat_name      AS seat_name,
+            r.total_price    AS total_price,
+            r.status         AS status
+        FROM reservations r
+        JOIN showtimes st  ON r.showtime_id = st.id
+        JOIN screens   sc  ON st.screen_id = sc.id
+        JOIN theaters  t   ON sc.theater_id = t.id
+        LEFT JOIN reservation_seats rs ON rs.reservation_id = r.id
+        LEFT JOIN seats            s  ON rs.seat_id       = s.id
+        WHERE r.user_id = #{userId}
+        ORDER BY r.id DESC, s.seat_name ASC
+    </select>
+
+    <!-- =========================================
+         7) 마이페이지용 "요약" 조회
+            ReservationMapper.findReservationSummariesByUserId(userId)
+       ========================================= -->
+    <resultMap id="ReservationSummaryDtoMap"
+               type="com.spring.dto.ReservationSummaryDto">
+        <id     property="reservationId" column="reservation_id"/>
+        <result property="movieTitle"    column="movie_title"/>
+        <result property="startTime"     column="start_time"/>
+        <result property="endTime"       column="end_time"/>
+        <result property="theaterName"   column="theater_name"/>
+        <result property="screenName"    column="screen_name"/>
+        <result property="totalPrice"    column="total_price"/>
+        <result property="status"        column="status"/>
+    </resultMap>
+
+    <select id="findReservationSummariesByUserId"
+            parameterType="long"
+            resultMap="ReservationSummaryDtoMap">
+        SELECT
+            r.id             AS reservation_id,
+            m.title          AS movie_title,
+            st.start_time    AS start_time,
+            st.end_time      AS end_time,
+            t.name           AS theater_name,
+            sc.name          AS screen_name,
+            r.total_price    AS total_price,
+            r.status         AS status
+        FROM reservations r
+        JOIN showtimes st  ON r.showtime_id = st.id
+        JOIN screens   sc  ON st.screen_id = sc.id
+        JOIN theaters  t   ON sc.theater_id = t.id
+        JOIN movies    m   ON st.movie_id   = m.id
+        WHERE r.user_id = #{userId}
+        ORDER BY r.id DESC
+    </select>
+
+    <!-- =========================================
+         8) 한 예약에 포함된 좌석 이름 목록
+            ReservationMapper.findSeatCodesByReservationId(reservationId)
+       ========================================= -->
+    <select id="findSeatCodesByReservationId"
+            parameterType="long"
+            resultType="string">
+        SELECT s.seat_name
+        FROM reservation_seats rs
+        JOIN seats s ON rs.seat_id = s.id
+        WHERE rs.reservation_id = #{reservationId}
+        ORDER BY s.seat_name ASC
+    </select>
+
+</mapper>

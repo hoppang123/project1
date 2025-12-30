@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.spring.mapper.ShowtimeMapper">
+
+    <!-- ShowtimeDto 매핑 -->
+    <resultMap id="ShowtimeMap" type="com.spring.dto.ShowtimeDto">
+        <id     property="id"          column="id" />
+        <result property="movieId"     column="movie_id" />
+        <result property="screenId"    column="screen_id" />
+        <result property="startTime"   column="start_time" />
+        <result property="endTime"     column="end_time" />
+        <result property="basePrice"   column="base_price" />
+
+        <result property="theaterName" column="theater_name" />
+        <result property="screenName"  column="screen_name" />
+    </resultMap>
+
+    <!-- 
+        movieId 기준 상영시간표 전체 조회
+        - showtimes.movie_id
+        - showtimes.screen_id
+        - screens.theater_id
+        - theaters.name
+        - screens.name
+    -->
+    <select id="selectShowtimesByMovieId"
+            parameterType="long"
+            resultMap="ShowtimeMap">
+
+        SELECT
+            st.id          AS id,
+            st.movie_id    AS movie_id,
+            st.screen_id   AS screen_id,
+
+            DATE_FORMAT(st.start_time, '%Y-%m-%d %H:%i') AS start_time,
+            DATE_FORMAT(st.end_time,   '%Y-%m-%d %H:%i') AS end_time,
+
+            st.base_price  AS base_price,
+
+            t.name         AS theater_name,
+            sc.name        AS screen_name
+        FROM showtimes st
+        JOIN screens sc
+          ON st.screen_id = sc.id
+        JOIN theaters t
+          ON sc.theater_id = t.id
+        WHERE st.movie_id = #{movieId}
+        ORDER BY st.start_time
+
+    </select>
+
+</mapper>
